@@ -97,14 +97,15 @@
     showOverlay('불러오는 중…', '', '');
     $('again').style.display = 'none';
     try {
-      const [bg, player, feverIm, ...rest] = await Promise.all([
+      const [bg, bgFever, player, feverIm, ...rest] = await Promise.all([
         loadImage(`bg-${char.id}`),
+        loadImage(`bgf-${char.id}`),          // 피버 중에 쓰는 판 — 배경 동물이 놀란 표정
         loadImage(`char-${char.id}`),
         loadImage(char.fever.img),
         ...HAZARDS.map(h => loadImage(h.img))
       ]);
       art = {
-        bg, player,
+        bg, bgFever, player,
         hazards: HAZARDS.map((h, i) => ({ ...h, im: rest[i] })),
         fever: { ...char.fever, im: feverIm, good: true }
       };
@@ -282,7 +283,7 @@
   function draw() {
     ctx.clearRect(0, 0, W, H);
     if (!art) return;
-    drawCover(art.bg);
+    drawCover(fever > 0 && art.bgFever ? art.bgFever : art.bg);
 
     for (const it of items) {
       if (it.rot) {

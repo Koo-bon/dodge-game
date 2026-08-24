@@ -14,13 +14,14 @@ const Bgm = { playing: false, fever: false, start() { this.playing = true; },
 
 // --- 가짜 브라우저 -----------------------------------------------------------
 const drawn = [];                       // 이번 프레임에 그린 이미지 이름들
-const drawnAt = { player: null };       // 캐릭터를 그린 좌표
+const drawnAt = { player: null, fev: null };  // 캐릭터·피버 아이템을 그린 좌표
 const ctx = {
   setTransform() {}, clearRect() { drawn.length = 0; }, save() {}, restore() {},
   translate() {}, rotate() {}, fillText() {}, strokeText() {}, strokeRect() {},
-  drawImage(im, x, y) {
+  drawImage(im, x, y, w, h) {
     drawn.push(im.name);
     if (im.name.startsWith('char-')) drawnAt.player = { x, y };
+    if (im.name.startsWith('fev-')) drawnAt.fev = { x, y, w, h };
   },
   imageSmoothingEnabled: true, globalAlpha: 1, textAlign: '', font: '',
   fillStyle: '', strokeStyle: '', lineWidth: 0
@@ -51,7 +52,7 @@ const doc = {
   getElementById: el,
   addEventListener(type, fn) { (handlers[`doc:${type}`] ??= []).push(fn); }
 };
-const win = { innerWidth: 520, innerHeight: 900, devicePixelRatio: 2, ASSET_V: '2', addEventListener() {} };
+const win = { innerWidth: 520, innerHeight: 900, devicePixelRatio: 2, ASSET_V: '3', addEventListener() {} };
 
 let now = 0;
 const perf = { now: () => now };
@@ -138,13 +139,14 @@ assert.equal(el('cname').textContent, CHARS[CHARS.length - 1].name, '앞으로 �
 fire('next:click');   // 다시 첫 캐릭터로
 assert.equal(el('cname').textContent, CHARS[0].name, '한 바퀴 돌아 첫 캐릭터여야 한다');
 
-// --- 2) START를 누르면 필요한 이미지 5장을 불러온다 --------------------------
-// (배경 1 + 캐릭터 1 + 피버 아이템 1 + 은행 + 낙엽)
+// --- 2) START를 누르면 필요한 이미지 6장을 불러온다 --------------------------
+// (배경 1 + 피버용 배경 1 + 캐릭터 1 + 피버 아이템 1 + 은행 + 낙엽)
 loaded.length = 0;
 fire('go:click');
 await flush();
-const want = ['bg-bonhyuk', 'char-bonhyuk', CHARS[0].fever.img, ...HAZARDS.map(h => h.img)];
-assert.deepEqual(loaded.slice().sort(), want.slice().sort(), '5장을 불러와야 한다');
+const want = ['bg-bonhyuk', 'bgf-bonhyuk', 'char-bonhyuk',
+              CHARS[0].fever.img, ...HAZARDS.map(h => h.img)];
+assert.deepEqual(loaded.slice().sort(), want.slice().sort(), '6장을 불러와야 한다');
 assert.equal(el('over').classList.contains('hide'), false, '시작 전 안내가 떠 있어야 한다');
 
 // --- 3) 시작하면 배경과 캐릭터가 그려지고 시간 점수가 오른다 -----------------
@@ -163,6 +165,39 @@ frames(320);                             // 약 5초
 const after = Number(el('score').textContent);
 assert.ok(after >= before + 4 && after <= before + 12,
   `점수는 버틴 시간만큼(피버면 2배) 올라야 한다: ${before} → ${after}`);
+
+// --- 4b) 피버 아이템을 먹으면 배경 동물이 놀란 표정 판으로 바뀐다 -----------
+// 모든 것이 화면 오른쪽 끝으로 떨어지게 하고 캐릭터도 오른쪽 끝에 세워 둔다.
+// 피버가 관측될 때까지 계속 진행하고, 도중에 죽으면 다시 시작한다.
+// 떨어지는 것들은 좌우로도 흘러가므로, 스폰 위치가 아니라 "지금 그려진 좌표"를
+// 보고 캐릭터를 피버 아이템 밑으로 따라 보낸다.
+randSeq = () => 0.99;
+const moveTo = x => fire('cv:pointermove', { clientX: x });
+moveTo(0);
+let feverFrames = 0, feverBgFrames = 0, plainBgWhileFever = 0, guardF = 0;
+while (feverFrames < 5 && guardF++ < 60 * 200) {
+  if (!el('over').classList.contains('hide')) { fire('again:click'); moveTo(0); }
+  // 피버 아이템이 화면에 있으면 그 밑으로 따라간다
+  const f = drawnAt.fev;
+  moveTo(f ? f.x + f.w / 2 : 0);
+  drawnAt.fev = null;
+  step();
+  if (/FEVER/.test(el('hp').textContent)) {
+    feverFrames++;
+    if (drawn.includes('bgf-bonhyuk')) feverBgFrames++;
+    if (drawn.includes('bg-bonhyuk')) plainBgWhileFever++;
+  }
+}
+assert.ok(feverFrames >= 5, `피버 아이템을 먹어 피버타임에 들어가야 한다 (관측 ${feverFrames})`);
+assert.equal(feverBgFrames, feverFrames,
+  `피버 중에는 놀란 표정 배경을 그려야 한다 (${feverBgFrames}/${feverFrames})`);
+assert.equal(plainBgWhileFever, 0, '피버 중에 평소 배경을 그리면 안 된다');
+
+// 피버가 끝나면 평소 배경으로 돌아온다
+for (let i = 0; i < 600 && /FEVER/.test(el('hp').textContent); i++) step();
+step();
+assert.ok(drawn.includes('bg-bonhyuk'), '피버가 끝나면 평소 배경으로 돌아와야 한다');
+assert.ok(!drawn.includes('bgf-bonhyuk'), '피버가 아니면 놀란 표정 배경을 쓰지 않아야 한다');
 
 // --- 5) 나쁜 것에 맞으면 목숨이 줄고, 다 잃으면 게임 오버 --------------------
 randSeq = HAZARD_CENTER;                 // 캐릭터가 있는 가운데로 떨어뜨린다
