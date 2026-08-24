@@ -52,7 +52,7 @@ const doc = {
   getElementById: el,
   addEventListener(type, fn) { (handlers[`doc:${type}`] ??= []).push(fn); }
 };
-const win = { innerWidth: 520, innerHeight: 900, devicePixelRatio: 2, ASSET_V: '3', addEventListener() {} };
+const win = { innerWidth: 520, innerHeight: 900, devicePixelRatio: 2, ASSET_V: '4', addEventListener() {} };
 
 let now = 0;
 const perf = { now: () => now };
