@@ -3,9 +3,13 @@
   const cv = $('cv'), ctx = cv.getContext('2d');
   const overlay = $('over');
 
-  const PLAYER_H = 78;        // 캐릭터 그리는 높이(px)
-  const HIT_R = 20;           // 캐릭터 판정 반지름(그림보다 작게 — 억울한 피격 방지)
-  const PAD_Y = PLAYER_H / 2; // 스프라이트가 위아래로 잘리지 않게 두는 여백
+  const BASE_W = 480;         // 이 폭을 기준으로 모든 크기를 비례해서 키운다
+  const PLAYER_H0 = 78;       // 기준 폭에서의 캐릭터 높이(px)
+  const HIT_R0 = 20;          // 기준 폭에서의 판정 반지름 (그림보다 작게 — 억울한 피격 방지)
+  let k = 1;                  // 화면 배율
+  const playerH = () => PLAYER_H0 * k;
+  const hitR = () => HIT_R0 * k;
+  const padY = () => playerH() / 2;   // 스프라이트가 위아래로 잘리지 않게 두는 여백
   const LIVES = 3;
   const INVULN = 0.8;         // 피격 후 무적 시간(초)
   const FEVER = 5;            // 피버타임 길이(초)
@@ -121,9 +125,10 @@
   }
 
   function resize() {
-    W = Math.min(480, window.innerWidth - 30);
-    H = Math.min(640, window.innerHeight - 190);
+    W = Math.min(620, window.innerWidth - 30);
+    H = Math.min(830, window.innerHeight - 170);
     if (H < 320) H = 320;
+    k = W / BASE_W;
     const dpr = window.devicePixelRatio || 1;
     cv.style.width = W + 'px';
     cv.style.height = H + 'px';
@@ -131,8 +136,8 @@
     cv.height = Math.round(H * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.imageSmoothingEnabled = false;
-    px = state === 'playing' ? clamp(px, HIT_R, W - HIT_R) : W / 2;
-    py = H - PAD_Y;                       // 바닥 고정. 세로로는 움직이지 않는다
+    px = state === 'playing' ? clamp(px, hitR(), W - hitR()) : W / 2;
+    py = H - padY();                      // 바닥 고정. 세로로는 움직이지 않는다
     if (art) draw();
   }
 
@@ -141,7 +146,7 @@
     elapsed = 0; lives = LIVES; invuln = 0; spawnTimer = 0;
     fever = 0; feverTimer = FEVER_EVERY * 0.6; points = 0;
     Bgm.setFever(false);
-    px = W / 2; py = H - PAD_Y;
+    px = W / 2; py = H - padY();
     state = 'playing';
     overlay.classList.add('hide');
     updateHud();
@@ -180,20 +185,20 @@
       kind, w, h, rot: 0, spin,
       x: Math.random() * Math.max(1, W - w),
       y: -h - 4,
-      vy,
-      vx: (Math.random() - 0.5) * 90        // 좌우로도 흘러서 세로만 피해서는 안 된다
+      vy: vy * k,
+      vx: (Math.random() - 0.5) * 90 * k    // 좌우로도 흘러서 세로만 피해서는 안 된다
     });
   }
 
   function spawn() {
     const d = difficulty(elapsed);
     const kind = art.hazards[Math.floor(Math.random() * art.hazards.length)];
-    push(kind, 30 + Math.random() * 12, 250 + Math.random() * 110 + d * 430,
+    push(kind, (30 + Math.random() * 12) * k, 250 + Math.random() * 110 + d * 430,
          (Math.random() - 0.5) * 2.5);
   }
 
   function spawnFever() {
-    push(art.fever, 36, 190 + Math.random() * 50, 0);
+    push(art.fever, 36 * k, 190 + Math.random() * 50, 0);
   }
 
   function hits(it) {
@@ -203,7 +208,7 @@
     const y1 = it.y + my, y2 = it.y + it.h - my;
     const nx = clamp(px, x1, x2), ny = clamp(py, y1, y2);
     const dx = px - nx, dy = py - ny;
-    return dx * dx + dy * dy < HIT_R * HIT_R;
+    return dx * dx + dy * dy < hitR() * hitR();
   }
 
   function loop(now) {
@@ -290,7 +295,7 @@
     // 무적 중에는 캐릭터가 깜빡인다
     const blink = state === 'playing' && fever <= 0 && invuln > 0 && Math.floor(invuln * 12) % 2 === 0;
     if (!blink) {
-      const ph = PLAYER_H, pw = ph * (art.player.width / art.player.height);
+      const ph = playerH(), pw = ph * (art.player.width / art.player.height);
       ctx.globalAlpha = state === 'over' ? 0.55 : 1;
       ctx.drawImage(art.player, px - pw / 2, py - ph / 2, pw, ph);
       ctx.globalAlpha = 1;
@@ -298,12 +303,12 @@
 
     if (fever > 0) {                       // 피버 중임을 화면 테두리로 알린다
       ctx.strokeStyle = Math.floor(fever * 8) % 2 ? '#ffe14d' : '#ff4f8b';
-      ctx.lineWidth = 6;
-      ctx.strokeRect(3, 3, W - 6, H - 6);
+      ctx.lineWidth = 6 * k;
+      ctx.strokeRect(3 * k, 3 * k, W - 6 * k, H - 6 * k);
     }
 
     ctx.textAlign = 'center';
-    ctx.font = 'bold 16px Galmuri, monospace';
+    ctx.font = `bold ${Math.round(16 * k)}px Galmuri, monospace`;
     for (const p of pops) {
       ctx.globalAlpha = Math.max(0, 1 - p.t / 0.7);
       ctx.fillStyle = p.good ? '#ffe14d' : '#ff5577';
@@ -320,7 +325,7 @@
   cv.addEventListener('pointermove', e => {
     if (state !== 'playing') return;
     const r = cv.getBoundingClientRect();
-    px = clamp(e.clientX - r.left, HIT_R, W - HIT_R);   // 좌우만 따라간다
+    px = clamp(e.clientX - r.left, hitR(), W - hitR());   // 좌우만 따라간다
   });
   cv.addEventListener('pointerdown', e => e.preventDefault());
 

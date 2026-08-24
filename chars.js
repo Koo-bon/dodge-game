@@ -10,7 +10,7 @@ const CHARS = [
     fever: { img: 'fev-headphones', name: '헤드폰' } },
   { id: 'seungil', name: '승일', team: '마케팅2팀',  tint: '#ffdfb0', want: '칸쿤',
     fever: { img: 'fev-bat',        name: '박쥐' } },
-  { id: 'yukyung', name: '유경', team: '사업전략',   tint: '#d7eec6', want: '밴쿠버',
+  { id: 'yukyung', name: '유경', team: '사업전략',   tint: '#d7eec6', want: '울릉도',
     fever: { img: 'fev-filmreel',   name: '필름 릴' } },
   { id: 'hyunho',  name: '현호', team: 'AI AX Lab', tint: '#ffe0cf', want: '밴쿠버',
     fever: { img: 'fev-web',        name: '거미줄' } },
