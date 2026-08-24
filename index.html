@@ -5,130 +5,146 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>가을 피하기</title>
 <style>
+  /* 한글까지 지원하는 픽셀 폰트를 직접 담아 둔다 (외부 의존 없음) */
+  @font-face {
+    font-family: Galmuri; font-weight: 400; font-display: swap;
+    src: url('fonts/Galmuri11.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: Galmuri; font-weight: 700; font-display: swap;
+    src: url('fonts/Galmuri11-Bold.woff2') format('woff2');
+  }
+
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body {
-    min-height: 100%;
-    background: #fff7f0;
-    background-image:
-      radial-gradient(circle at 12% 8%,  #ffe6cf 0, transparent 42%),
-      radial-gradient(circle at 88% 4%,  #ffdfe8 0, transparent 38%),
-      radial-gradient(circle at 50% 96%, #e6f4ff 0, transparent 46%);
-    color: #5b4638;
-    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
-                 "Malgun Gothic", "Segoe UI", sans-serif;
-    -webkit-user-select: none;
-    user-select: none;
+  html { background: #6fc3f0; }
+  body {
+    min-height: 100vh;
+    background: #6fc3f0;
+    background-image: linear-gradient(#5bb8ee 0%, #93d6f5 55%, #cfeeff 100%);
+    background-attachment: fixed;
+    color: #17263f;
+    font-family: Galmuri, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", monospace;
+    -webkit-user-select: none; user-select: none;
     -webkit-text-size-adjust: 100%;
   }
   body { display: flex; flex-direction: column; align-items: center; }
   img { image-rendering: pixelated; }
 
-  /* ---------- 캐릭터 선택 화면 ---------- */
-  #select { width: 100%; max-width: 680px; padding: 34px 16px 48px; }
+  /* 픽셀 게임 느낌: 둥근 모서리 없이 굵은 테두리와 딱 떨어지는 그림자 */
+  .px { border: 4px solid #17263f; box-shadow: 6px 6px 0 rgba(23, 38, 63, .25); }
+
+  /* ---------- 캐릭터 선택 ---------- */
+  #select { width: 100%; max-width: 560px; padding: 26px 14px 40px; text-align: center; }
   #select h1 {
-    font-size: 32px; letter-spacing: 2px; text-align: center; color: #e8735f;
-    text-shadow: 2px 2px 0 #fff, 4px 4px 0 #ffd9c2;
+    font-size: 33px; font-weight: 700; letter-spacing: 1px; color: #fff2b8;
+    text-shadow: 3px 3px 0 #17263f, 6px 6px 0 rgba(23,38,63,.28);
   }
-  #select p.lead { text-align: center; color: #8d7566; font-size: 14px; margin-top: 12px; line-height: 1.8; }
-  #grid {
-    margin-top: 26px;
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 14px;
+  #select .lead { margin-top: 14px; font-size: 11px; line-height: 2; }
+
+  #carousel { margin-top: 22px; display: flex; align-items: center; justify-content: center; gap: 4px; }
+  .arrow {
+    background: none; border: none; cursor: pointer; padding: 6px;
+    font: inherit; font-size: 24px; font-weight: 700; color: #17263f; line-height: 1;
+    text-shadow: 2px 2px 0 rgba(255,255,255,.6);
   }
-  @media (max-width: 540px) { #grid { grid-template-columns: repeat(2, 1fr); } }
-  .card {
-    background: #fff;
-    border: 3px solid #f3ddcd;
-    border-radius: 14px;
-    padding: 0 0 12px;
-    cursor: pointer;
-    overflow: hidden;
-    text-align: center;
-    transition: transform .12s, border-color .12s;
-  }
-  .card:hover, .card:focus-visible {
-    border-color: #f2a07f; transform: translateY(-3px); outline: none;
-  }
-  .card .thumb {
-    height: 130px;
+  .arrow:hover { color: #e8407a; }
+  .side { width: 78px; height: 84px; display: flex; align-items: flex-end; justify-content: center; }
+  .side img { height: 78px; width: auto; opacity: .5; }
+
+  #frame {
+    width: 172px; height: 190px; background: #fff;
     display: flex; align-items: flex-end; justify-content: center;
   }
-  .card .thumb img { height: 118px; width: auto; }
-  .card .nm { margin-top: 10px; font-size: 18px; font-weight: 800; color: #4d3a2d; }
-  .card .tm {
-    display: inline-block; margin-top: 6px; font-size: 11px; font-weight: 700;
-    color: #7a6152; background: #fdeee2; border-radius: 20px; padding: 3px 10px;
-  }
-  .card .pl { margin-top: 7px; font-size: 11px; color: #d3805f; font-weight: 600; }
-  .card .cc { margin-top: 5px; font-size: 11px; color: #96826f; line-height: 1.5; padding: 0 10px; }
-  .card .bs { margin-top: 8px; font-size: 11px; color: #b6a596; font-variant-numeric: tabular-nums; }
+  #frame img { height: 168px; width: auto; }
 
-  /* ---------- 게임 화면 ---------- */
-  #play { display: none; width: 100%; flex-direction: column; align-items: center; padding: 16px 12px 28px; }
+  #meta { margin-top: 18px; }
+  #cname { font-size: 22px; font-weight: 700; text-shadow: 2px 2px 0 rgba(255,255,255,.7); }
+  #cteam {
+    display: inline-block; margin-top: 10px; font-size: 11px; font-weight: 700;
+    background: #17263f; color: #ffe98f; padding: 5px 12px;
+  }
+  #cplace { margin-top: 12px; font-size: 12px; font-weight: 700; color: #b3306b; }
+  #cconcept { margin-top: 10px; font-size: 11px; line-height: 1.9; color: #2b3d5c; }
+  #citems { margin-top: 10px; font-size: 11px; line-height: 1.9; color: #3c527a; }
+  #cbest { margin-top: 12px; font-size: 11px; }
+
+  #dots { margin-top: 16px; display: flex; gap: 7px; justify-content: center; }
+  #dots i { width: 9px; height: 9px; background: rgba(23,38,63,.28); display: block; }
+  #dots i.on { background: #17263f; }
+
+  .btn {
+    font: inherit; font-weight: 700; cursor: pointer;
+    background: #ff4f8b; color: #fff;
+    border: 4px solid #17263f; box-shadow: 5px 5px 0 rgba(23,38,63,.3);
+    padding: 12px 26px; font-size: 16px; letter-spacing: 1px;
+  }
+  .btn:active { transform: translate(2px, 2px); box-shadow: 3px 3px 0 rgba(23,38,63,.3); }
+  .btn.alt { background: #fff; color: #17263f; font-size: 12px; padding: 10px 16px; }
+  #go { margin-top: 20px; }
+
+  /* ---------- 게임 ---------- */
+  #play { display: none; width: 100%; flex-direction: column; align-items: center; padding: 14px 12px 26px; }
   #play.on { display: flex; }
   #bar {
     width: 100%; max-width: 480px;
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 10px; margin-bottom: 10px; font-size: 14px;
-    background: #fff; border: 3px solid #f3ddcd; border-radius: 12px; padding: 8px 12px;
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    background: #fff; border: 4px solid #17263f; padding: 8px 10px; margin-bottom: 8px;
+    font-size: 12px; font-weight: 700;
   }
-  #bar .who { font-weight: 800; color: #4d3a2d; }
-  #bar .sc { font-variant-numeric: tabular-nums; color: #e8735f; font-weight: 800; }
-  #bar .hp { letter-spacing: 2px; color: #ff7d95; font-size: 16px; }
+  #bar .hp { color: #ff3355; letter-spacing: 2px; font-size: 14px; }
+  #bar .sc { color: #b3306b; font-variant-numeric: tabular-nums; }
   #quit {
-    background: #fdeee2; border: 2px solid #f3ddcd; color: #7a6152; border-radius: 20px;
-    font: inherit; font-size: 12px; font-weight: 700; padding: 4px 11px; cursor: pointer;
+    font: inherit; font-weight: 700; font-size: 11px; cursor: pointer;
+    background: #ffe98f; color: #17263f; border: 3px solid #17263f; padding: 5px 9px;
   }
-  #quit:hover { border-color: #f2a07f; color: #4d3a2d; }
   #stage { position: relative; }
   canvas {
-    display: block; background: #fdf3ea;
-    border: 3px solid #f3ddcd; border-radius: 12px;
-    touch-action: none; cursor: none;
-    image-rendering: pixelated;
+    display: block; background: #cfeeff; border: 4px solid #17263f;
+    touch-action: none; cursor: none; image-rendering: pixelated;
   }
   #over {
     position: absolute; inset: 0;
-    display: flex; align-items: center; justify-content: center;
-    padding: 18px;
-    background: rgba(88, 68, 56, .34);
-    border-radius: 12px;
-  }
-  #over .panel {
-    background: #fffdfa;
-    border: 3px solid #f3ddcd;
-    border-radius: 18px;
-    padding: 22px 22px 20px;
-    max-width: 100%;
-    display: flex; flex-direction: column; align-items: center; gap: 10px;
-    text-align: center;
-    box-shadow: 0 6px 0 rgba(140, 110, 90, .14);
+    display: flex; align-items: center; justify-content: center; padding: 16px;
+    background: rgba(23, 38, 63, .5);
   }
   #over.hide { display: none; }
-  #over .t { font-size: 27px; font-weight: 800; color: #e8735f; text-shadow: 2px 2px 0 #fff; }
-  #over .s { font-size: 15px; color: #5b4638; line-height: 1.8; font-weight: 600; }
-  #over .h { font-size: 12px; color: #96826f; margin-top: 2px; line-height: 1.8; }
-  #over .btns { display: flex; gap: 10px; margin-top: 6px; }
-  #over button {
-    background: #ff9a7b; color: #fff; border: none; border-radius: 22px;
-    font: inherit; font-weight: 800; font-size: 14px;
-    padding: 11px 20px; cursor: pointer;
+  #over .panel {
+    background: #fff; border: 4px solid #17263f; box-shadow: 6px 6px 0 rgba(23,38,63,.3);
+    padding: 20px 18px; max-width: 100%;
+    display: flex; flex-direction: column; align-items: center; gap: 9px; text-align: center;
   }
-  #over button.alt { background: #fff; color: #7a6152; border: 2px solid #f3ddcd; }
-  #over button:hover { filter: brightness(1.05); }
-  #tips { margin-top: 14px; font-size: 12px; color: #a08d7c; text-align: center; line-height: 1.8; max-width: 480px; }
+  #over .t { font-size: 22px; font-weight: 700; color: #b3306b; }
+  #over .s { font-size: 12px; line-height: 1.9; font-weight: 700; }
+  #over .h { font-size: 11px; line-height: 1.9; color: #4b5f80; }
+  #over .btns { display: flex; gap: 8px; margin-top: 4px; flex-wrap: wrap; justify-content: center; }
+  #tips { margin-top: 12px; font-size: 11px; line-height: 1.9; text-align: center; max-width: 480px; }
 </style>
 </head>
 <body>
 
 <section id="select">
   <h1>가을 피하기</h1>
-  <p class="lead">
-    은행 · 밤송이 · 낙엽 · 단풍은 피하고, 내 것들만 주워 먹기.<br>
-    캐릭터를 고르면 배경과 주울 것들이 바뀝니다.
-  </p>
-  <div id="grid"></div>
+  <p class="lead">은행 · 밤송이 · 낙엽 · 단풍은 피하고<br>내 것들만 주워 먹기</p>
+
+  <div id="carousel">
+    <div class="side"><img id="prevImg" alt=""></div>
+    <button id="prev" class="arrow" type="button" aria-label="이전 캐릭터">◀</button>
+    <div id="frame" class="px"><img id="charImg" alt=""></div>
+    <button id="next" class="arrow" type="button" aria-label="다음 캐릭터">▶</button>
+    <div class="side"><img id="nextImg" alt=""></div>
+  </div>
+
+  <div id="meta">
+    <div id="cname">—</div>
+    <div id="cteam">—</div>
+    <div id="cplace">—</div>
+    <div id="cconcept">—</div>
+    <div id="citems">—</div>
+    <div id="cbest">최고 0점</div>
+  </div>
+
+  <div id="dots"></div>
+  <button id="go" class="btn" type="button">START</button>
 </section>
 
 <section id="play">
@@ -146,13 +162,13 @@
         <div class="s" id="overS"></div>
         <div class="h" id="overH"></div>
         <div class="btns">
-          <button id="again" type="button">시작</button>
-          <button id="back" class="alt" type="button">캐릭터 변경</button>
+          <button id="again" class="btn" type="button">시작</button>
+          <button id="back" class="btn alt" type="button">캐릭터 변경</button>
         </div>
       </div>
     </div>
   </div>
-  <p id="tips">마우스나 손가락을 움직여 캐릭터를 조종합니다.</p>
+  <p id="tips">마우스나 손가락을 움직여 캐릭터를 조종합니다</p>
 </section>
 
 <script src="chars.js"></script>

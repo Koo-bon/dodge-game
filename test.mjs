@@ -29,7 +29,7 @@ function el(id) {
       add(c) { this._c.add(c); }, remove(c) { this._c.delete(c); },
       contains(c) { return this._c.has(c); }
     },
-    dataset: {},
+    dataset: {}, children: [],
     getContext: () => ctx,
     getBoundingClientRect: () => ({ left: 0, top: 0 }),
     addEventListener(type, fn) { (handlers[`${id}:${type}`] ??= []).push(fn); },
@@ -116,12 +116,23 @@ for (const c of CHARS) {
   assert.match(c.tint, /^#[0-9a-f]{6}$/i, `${c.name}의 카드 색이 있어야 한다`);
 }
 assert.equal(HAZARDS.length, 4, '피해야 하는 것은 4개여야 한다');
-assert.equal(cards.length, 6, '선택 카드가 6개 만들어져야 한다');
 
-// --- 2) 캐릭터를 고르면 필요한 이미지 9장을 불러온다 --------------------------
+// --- 1b) 선택 캐러셀: 처음엔 첫 캐릭터, 화살표로 넘어간다 ------------------
+assert.equal(el('cname').textContent, CHARS[0].name, '처음엔 첫 캐릭터가 보여야 한다');
+assert.equal(el('cteam').textContent, CHARS[0].team, '팀명이 보여야 한다');
+assert.ok(el('charImg').src.includes(`char-${CHARS[0].id}`), '캐릭터 그림이 걸려야 한다');
+fire('next:click');
+assert.equal(el('cname').textContent, CHARS[1].name, '다음 화살표로 넘어가야 한다');
+fire('prev:click');
+fire('prev:click');
+assert.equal(el('cname').textContent, CHARS[CHARS.length - 1].name, '앞으로 넘기면 마지막으로 돌아가야 한다');
+fire('next:click');   // 다시 첫 캐릭터로
+assert.equal(el('cname').textContent, CHARS[0].name, '한 바퀴 돌아 첫 캐릭터여야 한다');
+
+// --- 2) START를 누르면 필요한 이미지 9장을 불러온다 --------------------------
 // (배경 1 + 캐릭터 1 + 나쁜 것 4 + 좋은 것 3)
 loaded.length = 0;
-fire('card0:click');
+fire('go:click');
 await flush();
 const want = ['bg-bonhyuk', 'char-bonhyuk',
               ...HAZARDS.map(h => h.img), ...CHARS[0].goodies.map(g => g.img)];

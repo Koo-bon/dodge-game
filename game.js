@@ -29,27 +29,40 @@
     return p;
   }
 
-  // ---------- 캐릭터 선택 화면 ----------
+  // ---------- 캐릭터 선택 (좌우로 넘기는 캐러셀) ----------
+  let sel = 0;
+
   function buildSelect() {
-    $('grid').innerHTML = CHARS.map(c => `
-      <div class="card" tabindex="0" role="button" data-id="${c.id}">
-        <div class="thumb" style="background:${c.tint}">
-          <img src="assets/char-${c.id}.png" alt="${c.name}">
-        </div>
-        <div class="nm">${c.name}</div>
-        <div class="tm">${c.team}</div>
-        <div class="pl">${c.place}</div>
-        <div class="cc">${c.concept}</div>
-        <div class="bs">최고 ${store.get(bestKey(c.id))}점</div>
-      </div>`).join('');
-    $('grid').querySelectorAll('.card').forEach(el => {
-      const pick = () => choose(el.dataset.id);
-      el.addEventListener('click', pick);
-      el.addEventListener('keydown', e => {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); }
-      });
-    });
+    $('dots').innerHTML = CHARS.map(() => '<i></i>').join('');
+    renderSelect();
   }
+
+  function renderSelect() {
+    const n = CHARS.length;
+    const c = CHARS[sel];
+    const prev = CHARS[(sel - 1 + n) % n];
+    const next = CHARS[(sel + 1) % n];
+
+    $('charImg').src = `assets/char-${c.id}.png`;
+    $('charImg').alt = c.name;
+    $('prevImg').src = `assets/char-${prev.id}.png`;
+    $('nextImg').src = `assets/char-${next.id}.png`;
+    $('frame').style.background = c.tint;
+
+    $('cname').textContent = c.name;
+    $('cteam').textContent = c.team;
+    $('cplace').textContent = c.place;
+    $('cconcept').textContent = c.concept;
+    $('citems').textContent = '주우면 ' + c.goodies.map(g => `${g.name} +${g.pt}`).join(' · ');
+    $('cbest').textContent = `최고 ${store.get(bestKey(c.id))}점`;
+
+    [...$('dots').children].forEach((d, i) => d.className = i === sel ? 'on' : '');
+  }
+
+  const step = d => {
+    sel = (sel + d + CHARS.length) % CHARS.length;
+    renderSelect();
+  };
 
   // ---------- 상태 ----------
   let char = null;            // 선택된 캐릭터
@@ -261,7 +274,7 @@
     }
 
     ctx.textAlign = 'center';
-    ctx.font = 'bold 17px -apple-system, sans-serif';
+    ctx.font = 'bold 16px Galmuri, monospace';
     for (const p of pops) {
       ctx.globalAlpha = Math.max(0, 1 - p.t / 0.7);
       ctx.fillStyle = p.good ? '#ffe07a' : '#ff6b84';
@@ -288,6 +301,15 @@
   cv.addEventListener('pointerdown', press);
   document.addEventListener('keydown', e => {
     if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); press(); }
+  });
+
+  $('prev').addEventListener('click', () => step(-1));
+  $('next').addEventListener('click', () => step(1));
+  $('go').addEventListener('click', () => choose(CHARS[sel].id));
+  document.addEventListener('keydown', e => {
+    if (state !== 'select') return;
+    if (e.key === 'ArrowLeft')  { e.preventDefault(); step(-1); }
+    if (e.key === 'ArrowRight') { e.preventDefault(); step(1); }
   });
 
   const toSelect = () => {
