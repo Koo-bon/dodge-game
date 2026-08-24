@@ -7,7 +7,7 @@
   const HIT_R = 20;           // 캐릭터 판정 반지름(그림보다 작게 — 억울한 피격 방지)
   const PAD_Y = PLAYER_H / 2; // 스프라이트가 위아래로 잘리지 않게 두는 여백
   const LIVES = 3;
-  const INVULN = 1.2;         // 피격 후 무적 시간(초)
+  const INVULN = 0.9;         // 피격 후 무적 시간(초)
 
   // 시크릿 모드·일부 브라우저에서 localStorage 접근 자체가 예외를 던진다
   const store = {
@@ -161,8 +161,8 @@
     updateHud();
   }
 
-  // 시간이 지날수록 더 자주, 더 빠르게 — 60초에 최대 난이도
-  const difficulty = t => Math.min(t / 60, 1);
+  // 시간이 지날수록 더 자주, 더 빠르게 — 35초에 최대 난이도
+  const difficulty = t => Math.min(t / 35, 1);
 
   function spawn() {
     const d = difficulty(elapsed);
@@ -173,7 +173,7 @@
       kind, w, h,
       x: Math.random() * Math.max(1, W - w),
       y: -h - 4,
-      vy: 160 + Math.random() * 80 + d * 250,
+      vy: 210 + Math.random() * 90 + d * 340,
       spin: (Math.random() - 0.5) * 2.5,
       rot: 0
     });
@@ -196,7 +196,7 @@
     elapsed += dt;
     if (invuln > 0) invuln -= dt;
 
-    const interval = 0.60 - difficulty(elapsed) * 0.40;
+    const interval = 0.42 - difficulty(elapsed) * 0.30;
     spawnTimer += dt;
     while (spawnTimer >= interval) { spawnTimer -= interval; spawn(); }
 
