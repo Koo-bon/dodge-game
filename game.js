@@ -7,7 +7,9 @@
   const HIT_R = 20;           // 캐릭터 판정 반지름(그림보다 작게 — 억울한 피격 방지)
   const PAD_Y = PLAYER_H / 2; // 스프라이트가 위아래로 잘리지 않게 두는 여백
   const LIVES = 3;
-  const INVULN = 0.9;         // 피격 후 무적 시간(초)
+  const INVULN = 0.8;         // 피격 후 무적 시간(초)
+  const FEVER = 5;            // 피버타임 길이(초)
+  const FEVER_EVERY = 11;     // 피버 아이템이 나오는 평균 간격(초)
 
   // 시크릿 모드·일부 브라우저에서 localStorage 접근 자체가 예외를 던진다
   const store = {
@@ -51,8 +53,8 @@
 
     $('cname').textContent = c.name;
     $('cteam').textContent = c.team;
-    $('cplace').textContent = c.place;
-    $('cconcept').textContent = c.costume;
+    $('cplace').textContent = `가고 싶은 곳 : ${c.want}`;
+    $('cconcept').textContent = `피버 아이템 : ${c.fever.name}`;
     $('cbest').textContent = `최고 ${store.get(bestKey(c.id))}점`;
 
     [...$('dots').children].forEach((d, i) => d.className = i === sel ? 'on' : '');
@@ -71,9 +73,11 @@
   let px = 0, py = 0;
   let items = [], pops = [];
   let elapsed = 0, lives = LIVES, invuln = 0, spawnTimer = 0, last = 0;
+  let fever = 0, feverTimer = 0;   // 남은 피버 시간, 다음 피버 아이템까지
 
   const clamp = (v, lo, hi) => v < lo ? lo : v > hi ? hi : v;
-  const score = () => Math.floor(elapsed);
+  let points = 0;                 // 쌓인 점수 (피버 중에는 2배로 쌓인다)
+  const score = () => Math.floor(points);
 
   async function choose(id) {
     char = CHARS.find(c => c.id === id);
@@ -85,12 +89,17 @@
     showOverlay('불러오는 중…', '', '');
     $('again').style.display = 'none';
     try {
-      const [bg, player, ...rest] = await Promise.all([
+      const [bg, player, feverIm, ...rest] = await Promise.all([
         loadImage(`bg-${char.id}`),
         loadImage(`char-${char.id}`),
+        loadImage(char.fever.img),
         ...HAZARDS.map(h => loadImage(h.img))
       ]);
-      art = { bg, player, hazards: HAZARDS.map((h, i) => ({ ...h, im: rest[i] })) };
+      art = {
+        bg, player,
+        hazards: HAZARDS.map((h, i) => ({ ...h, im: rest[i] })),
+        fever: { ...char.fever, im: feverIm, good: true }
+      };
     } catch (e) {
       showOverlay('이미지를 못 불러왔습니다', e.message, '새로고침해 주세요');
       return;
@@ -99,7 +108,8 @@
     $('again').textContent = '시작';
     showOverlay(char.name,
       `${HAZARDS.map(h => h.name).join('과 ')}을 피하세요`,
-      `목숨 ${LIVES}개 · 버틴 1초가 1점`);
+      `목숨 ${LIVES}개 · 버틴 1초가 1점<br>` +
+      `${char.fever.name}을 먹으면 ${FEVER}초 피버타임 (무적 · 2배 점수)`);
     draw();
   }
 
@@ -121,19 +131,15 @@
     cv.height = Math.round(H * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.imageSmoothingEnabled = false;
-    if (state === 'playing') {
-      px = clamp(px, HIT_R, W - HIT_R);
-      py = clamp(py, PAD_Y, H - PAD_Y);
-    } else {
-      px = W / 2;
-      py = H - PAD_Y;
-    }
+    px = state === 'playing' ? clamp(px, HIT_R, W - HIT_R) : W / 2;
+    py = H - PAD_Y;                       // 바닥 고정. 세로로는 움직이지 않는다
     if (art) draw();
   }
 
   function start() {
     items = []; pops = [];
     elapsed = 0; lives = LIVES; invuln = 0; spawnTimer = 0;
+    fever = 0; feverTimer = FEVER_EVERY * 0.6; points = 0;
     px = W / 2; py = H - PAD_Y;
     state = 'playing';
     overlay.classList.add('hide');
@@ -144,7 +150,10 @@
 
   function updateHud() {
     $('score').textContent = score();
-    $('hp').textContent = '♥'.repeat(Math.max(0, lives)) + '♡'.repeat(LIVES - Math.max(0, lives));
+    $('hp').textContent = fever > 0
+      ? `FEVER ${Math.ceil(fever)}`
+      : '♥'.repeat(Math.max(0, lives)) + '♡'.repeat(LIVES - Math.max(0, lives));
+    $('hp').classList.toggle('fev', fever > 0);
   }
 
   function gameOver() {
@@ -162,21 +171,28 @@
   }
 
   // 시간이 지날수록 더 자주, 더 빠르게 — 35초에 최대 난이도
-  const difficulty = t => Math.min(t / 35, 1);
+  const difficulty = t => Math.min(t / 22, 1);
+
+  function push(kind, h, vy, spin) {
+    const w = h * (kind.im.width / kind.im.height);
+    items.push({
+      kind, w, h, rot: 0, spin,
+      x: Math.random() * Math.max(1, W - w),
+      y: -h - 4,
+      vy,
+      vx: (Math.random() - 0.5) * 90        // 좌우로도 흘러서 세로만 피해서는 안 된다
+    });
+  }
 
   function spawn() {
     const d = difficulty(elapsed);
     const kind = art.hazards[Math.floor(Math.random() * art.hazards.length)];
-    const h = 30 + Math.random() * 12;
-    const w = h * (kind.im.width / kind.im.height);
-    items.push({
-      kind, w, h,
-      x: Math.random() * Math.max(1, W - w),
-      y: -h - 4,
-      vy: 210 + Math.random() * 90 + d * 340,
-      spin: (Math.random() - 0.5) * 2.5,
-      rot: 0
-    });
+    push(kind, 30 + Math.random() * 12, 250 + Math.random() * 110 + d * 430,
+         (Math.random() - 0.5) * 2.5);
+  }
+
+  function spawnFever() {
+    push(art.fever, 36, 190 + Math.random() * 50, 0);
   }
 
   function hits(it) {
@@ -194,20 +210,37 @@
     const dt = Math.min((now - last) / 1000, 0.05);  // 탭 전환 후 순간이동 방지
     last = now;
     elapsed += dt;
+    points += dt * (fever > 0 ? 2 : 1);
     if (invuln > 0) invuln -= dt;
+    if (fever > 0) fever -= dt;
 
-    const interval = 0.42 - difficulty(elapsed) * 0.30;
+    feverTimer -= dt;
+    if (feverTimer <= 0) {
+      feverTimer = FEVER_EVERY * (0.7 + Math.random() * 0.6);
+      spawnFever();
+    }
+
+    const interval = 0.34 - difficulty(elapsed) * 0.26;
     spawnTimer += dt;
     while (spawnTimer >= interval) { spawnTimer -= interval; spawn(); }
 
     for (let i = items.length - 1; i >= 0; i--) {
       const it = items[i];
       it.y += it.vy * dt;
+      it.x += it.vx * dt;
+      if (it.x < 0) { it.x = 0; it.vx = -it.vx; }                 // 벽에서 튕긴다
+      if (it.x > W - it.w) { it.x = W - it.w; it.vx = -it.vx; }
       it.rot += it.spin * dt;
       if (it.y > H + 40) { items.splice(i, 1); continue; }
       if (!hits(it)) continue;
 
-      if (invuln <= 0) {
+      if (it.kind.good) {                                        // 피버 아이템
+        fever = FEVER;
+        pops.push({ x: it.x + it.w / 2, y: it.y, t: 0, txt: '피버!', good: true });
+        items.splice(i, 1);
+      } else if (fever > 0) {
+        continue;                                                // 피버 중에는 그냥 통과
+      } else if (invuln <= 0) {
         lives--;
         invuln = INVULN;
         pops.push({ x: it.x + it.w / 2, y: it.y, t: 0, txt: '−1' });
@@ -251,7 +284,7 @@
     }
 
     // 무적 중에는 캐릭터가 깜빡인다
-    const blink = state === 'playing' && invuln > 0 && Math.floor(invuln * 12) % 2 === 0;
+    const blink = state === 'playing' && fever <= 0 && invuln > 0 && Math.floor(invuln * 12) % 2 === 0;
     if (!blink) {
       const ph = PLAYER_H, pw = ph * (art.player.width / art.player.height);
       ctx.globalAlpha = state === 'over' ? 0.55 : 1;
@@ -259,11 +292,17 @@
       ctx.globalAlpha = 1;
     }
 
+    if (fever > 0) {                       // 피버 중임을 화면 테두리로 알린다
+      ctx.strokeStyle = Math.floor(fever * 8) % 2 ? '#ffe14d' : '#ff4f8b';
+      ctx.lineWidth = 6;
+      ctx.strokeRect(3, 3, W - 6, H - 6);
+    }
+
     ctx.textAlign = 'center';
     ctx.font = 'bold 16px Galmuri, monospace';
     for (const p of pops) {
       ctx.globalAlpha = Math.max(0, 1 - p.t / 0.7);
-      ctx.fillStyle = '#ff5577';
+      ctx.fillStyle = p.good ? '#ffe14d' : '#ff5577';
       ctx.strokeStyle = 'rgba(0,0,0,.65)';
       ctx.lineWidth = 3;
       const y = p.y - p.t * 40;
@@ -277,12 +316,27 @@
   cv.addEventListener('pointermove', e => {
     if (state !== 'playing') return;
     const r = cv.getBoundingClientRect();
-    px = clamp(e.clientX - r.left, HIT_R, W - HIT_R);
-    py = clamp(e.clientY - r.top, PAD_Y, H - PAD_Y);
+    px = clamp(e.clientX - r.left, HIT_R, W - HIT_R);   // 좌우만 따라간다
   });
   cv.addEventListener('pointerdown', e => e.preventDefault());
 
-  const press = () => { if (art && state !== 'playing') start(); };
+  // 브라우저는 사용자가 누른 직후에만 소리를 허용하므로 시작 클릭에서 함께 켠다
+  let soundWanted = true;
+  function syncSound() {
+    $('sound').textContent = Asmr.playing ? '♪ ON' : '♪ OFF';
+    $('sound').classList.toggle('off', !Asmr.playing);
+  }
+  $('sound').addEventListener('click', () => {
+    soundWanted = !soundWanted;
+    soundWanted ? Asmr.start() : Asmr.stop();
+    syncSound();
+  });
+
+  const press = () => {
+    if (soundWanted) Asmr.start();
+    syncSound();
+    if (art && state !== 'playing') start();
+  };
   $('again').addEventListener('click', press);
   cv.addEventListener('pointerdown', press);
   document.addEventListener('keydown', e => {

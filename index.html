@@ -92,10 +92,12 @@
   }
   #bar .hp { color: #ff3355; letter-spacing: 2px; font-size: 14px; }
   #bar .sc { color: #b3306b; font-variant-numeric: tabular-nums; }
-  #quit {
+  #quit, #sound {
     font: inherit; font-weight: 700; font-size: 11px; cursor: pointer;
     background: #ffe98f; color: #17263f; border: 3px solid #17263f; padding: 5px 9px;
   }
+  #sound.off { background: #e6e0d6; color: #8a8378; }
+  #bar .hp.fev { color: #d98a00; }
   #stage { position: relative; }
   canvas {
     display: block; background: #cfeeff; border: 4px solid #17263f;
@@ -150,6 +152,7 @@
     <span class="who" id="who">—</span>
     <span class="hp" id="hp">♥♥♥</span>
     <span class="sc"><span id="score">0</span>점</span>
+    <button id="sound" type="button" title="배경음">♪ ON</button>
     <button id="quit" type="button">캐릭터 변경</button>
   </div>
   <div id="stage">
@@ -166,9 +169,10 @@
       </div>
     </div>
   </div>
-  <p id="tips">마우스나 손가락을 움직여 캐릭터를 조종합니다</p>
+  <p id="tips">마우스나 손가락을 좌우로 움직여 피하세요</p>
 </section>
 
+<script src="asmr.js"></script>
 <script src="chars.js"></script>
 <script src="game.js"></script>
 </body>
