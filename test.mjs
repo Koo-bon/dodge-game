@@ -51,7 +51,7 @@ const doc = {
   getElementById: el,
   addEventListener(type, fn) { (handlers[`doc:${type}`] ??= []).push(fn); }
 };
-const win = { innerWidth: 520, innerHeight: 900, devicePixelRatio: 2, addEventListener() {} };
+const win = { innerWidth: 520, innerHeight: 900, devicePixelRatio: 2, ASSET_V: '2', addEventListener() {} };
 
 let now = 0;
 const perf = { now: () => now };
@@ -67,7 +67,7 @@ const ls = {
 const loaded = [];
 class FakeImage {
   set src(v) {
-    this.name = v.replace(/^assets\//, '').replace(/\.png$/, '');
+    this.name = v.replace(/^assets\//, '').replace(/\.png(\?.*)?$/, '');
     loaded.push(this.name);
     this.width = 128; this.height = 128;
     queueMicrotask(() => this.onload?.());

@@ -22,6 +22,10 @@
   };
   const bestKey = id => `fall.best.${id}`;
 
+  // 에셋 주소에 붙이는 판 번호. 그림을 바꿀 때 index.html의 ASSET_V와 함께 올린다.
+  // (GitHub Pages가 이미지를 10분간 캐시해서, 이게 없으면 새 그림이 바로 안 보인다)
+  const V = window.ASSET_V || '1';
+
   const imgCache = new Map();
   function loadImage(name) {
     if (imgCache.has(name)) return imgCache.get(name);
@@ -29,7 +33,7 @@
       const im = new Image();
       im.onload = () => res(im);
       im.onerror = () => rej(new Error(`이미지 로드 실패: ${name}`));
-      im.src = `assets/${name}.png`;
+      im.src = `assets/${name}.png?v=${V}`;
     });
     imgCache.set(name, p);
     return p;
@@ -49,10 +53,10 @@
     const prev = CHARS[(sel - 1 + n) % n];
     const next = CHARS[(sel + 1) % n];
 
-    $('charImg').src = `assets/char-${c.id}.png`;
+    $('charImg').src = `assets/char-${c.id}.png?v=${V}`;
     $('charImg').alt = c.name;
-    $('prevImg').src = `assets/char-${prev.id}.png`;
-    $('nextImg').src = `assets/char-${next.id}.png`;
+    $('prevImg').src = `assets/char-${prev.id}.png?v=${V}`;
+    $('nextImg').src = `assets/char-${next.id}.png?v=${V}`;
     $('frame').style.background = c.tint;
 
     $('cname').textContent = c.name;
