@@ -52,8 +52,7 @@
     $('cname').textContent = c.name;
     $('cteam').textContent = c.team;
     $('cplace').textContent = c.place;
-    $('cconcept').textContent = c.concept;
-    $('citems').textContent = '주우면 ' + c.goodies.map(g => `${g.name} +${g.pt}`).join(' · ');
+    $('cconcept').textContent = c.costume;
     $('cbest').textContent = `최고 ${store.get(bestKey(c.id))}점`;
 
     [...$('dots').children].forEach((d, i) => d.className = i === sel ? 'on' : '');
@@ -66,15 +65,15 @@
 
   // ---------- 상태 ----------
   let char = null;            // 선택된 캐릭터
-  let art = null;             // { bg, player, hazards:[], goodies:[] } — 로드된 이미지
+  let art = null;             // { bg, player, hazards:[] } — 로드된 이미지
   let state = 'select';       // select | ready | playing | over
   let W = 0, H = 0;
   let px = 0, py = 0;
   let items = [], pops = [];
-  let elapsed = 0, picked = 0, pickedCount = 0, lives = LIVES, invuln = 0, spawnTimer = 0, last = 0;
+  let elapsed = 0, lives = LIVES, invuln = 0, spawnTimer = 0, last = 0;
 
   const clamp = (v, lo, hi) => v < lo ? lo : v > hi ? hi : v;
-  const score = () => Math.floor(elapsed) + picked;
+  const score = () => Math.floor(elapsed);
 
   async function choose(id) {
     char = CHARS.find(c => c.id === id);
@@ -89,24 +88,18 @@
       const [bg, player, ...rest] = await Promise.all([
         loadImage(`bg-${char.id}`),
         loadImage(`char-${char.id}`),
-        ...HAZARDS.map(h => loadImage(h.img)),
-        ...char.goodies.map(g => loadImage(g.img))
+        ...HAZARDS.map(h => loadImage(h.img))
       ]);
-      art = {
-        bg, player,
-        hazards: HAZARDS.map((h, i) => ({ ...h, im: rest[i], bad: true })),
-        goodies: char.goodies.map((g, i) => ({ ...g, im: rest[HAZARDS.length + i], bad: false }))
-      };
+      art = { bg, player, hazards: HAZARDS.map((h, i) => ({ ...h, im: rest[i] })) };
     } catch (e) {
       showOverlay('이미지를 못 불러왔습니다', e.message, '새로고침해 주세요');
       return;
     }
     $('again').style.display = '';
     $('again').textContent = '시작';
-    const goodNames = char.goodies.map(g => `${g.name} +${g.pt}`).join(' · ');
     showOverlay(char.name,
-      `주우면 점수: ${goodNames}`,
-      `피할 것: ${HAZARDS.map(h => h.name).join(' · ')}<br>목숨 ${LIVES}개 · 버틴 1초당 1점`);
+      `${HAZARDS.map(h => h.name).join('과 ')}을 피하세요`,
+      `목숨 ${LIVES}개 · 버틴 1초가 1점`);
     draw();
   }
 
@@ -140,7 +133,7 @@
 
   function start() {
     items = []; pops = [];
-    elapsed = 0; picked = 0; pickedCount = 0; lives = LIVES; invuln = 0; spawnTimer = 0;
+    elapsed = 0; lives = LIVES; invuln = 0; spawnTimer = 0;
     px = W / 2; py = H - PAD_Y;
     state = 'playing';
     overlay.classList.add('hide');
@@ -162,7 +155,7 @@
     let head = '게임 오버';
     if (sc > prev) { store.set(key, sc); head = '최고 기록!'; }
     showOverlay(head,
-      `${sc}점 · ${elapsed.toFixed(1)}초 버팀<br>주운 것 ${pickedCount}개`,
+      `${elapsed.toFixed(1)}초 버팀`,
       `최고 ${Math.max(sc, prev)}점 (${char.name})`);
     $('again').textContent = '다시 하기';
     updateHud();
@@ -173,17 +166,15 @@
 
   function spawn() {
     const d = difficulty(elapsed);
-    // 나쁜 것 65% / 좋은 것 35%
-    const pool = Math.random() < 0.65 ? art.hazards : art.goodies;
-    const kind = pool[Math.floor(Math.random() * pool.length)];
-    const h = kind.bad ? 30 + Math.random() * 12 : 32;
+    const kind = art.hazards[Math.floor(Math.random() * art.hazards.length)];
+    const h = 30 + Math.random() * 12;
     const w = h * (kind.im.width / kind.im.height);
     items.push({
       kind, w, h,
       x: Math.random() * Math.max(1, W - w),
       y: -h - 4,
       vy: 160 + Math.random() * 80 + d * 250,
-      spin: kind.bad ? (Math.random() - 0.5) * 2.5 : 0,
+      spin: (Math.random() - 0.5) * 2.5,
       rot: 0
     });
   }
@@ -216,19 +207,14 @@
       if (it.y > H + 40) { items.splice(i, 1); continue; }
       if (!hits(it)) continue;
 
-      if (!it.kind.bad) {                              // 좋은 것 → 점수
-        picked += it.kind.pt;
-        pickedCount++;
-        pops.push({ x: it.x + it.w / 2, y: it.y, t: 0, txt: `+${it.kind.pt}`, good: true });
-        items.splice(i, 1);
-      } else if (invuln <= 0) {                        // 나쁜 것 → 목숨
+      if (invuln <= 0) {
         lives--;
         invuln = INVULN;
-        pops.push({ x: it.x + it.w / 2, y: it.y, t: 0, txt: '−1', good: false });
+        pops.push({ x: it.x + it.w / 2, y: it.y, t: 0, txt: '−1' });
         items.splice(i, 1);
         if (lives <= 0) { updateHud(); draw(); return gameOver(); }
+        updateHud();
       }
-      updateHud();
     }
 
     for (let i = pops.length - 1; i >= 0; i--) {
@@ -277,7 +263,7 @@
     ctx.font = 'bold 16px Galmuri, monospace';
     for (const p of pops) {
       ctx.globalAlpha = Math.max(0, 1 - p.t / 0.7);
-      ctx.fillStyle = p.good ? '#ffe07a' : '#ff6b84';
+      ctx.fillStyle = '#ff5577';
       ctx.strokeStyle = 'rgba(0,0,0,.65)';
       ctx.lineWidth = 3;
       const y = p.y - p.t * 40;

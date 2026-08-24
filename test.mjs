@@ -67,14 +67,11 @@ class FakeImage {
 }
 
 // Math.random을 테스트가 조종한다 (Math의 나머지 기능은 그대로 쓴다)
-// spawn() 안에서 불리는 순서대로 값을 돌려준다:
-//   나쁜 것 → [풀 선택, 종류, 높이, x위치, 속도, 회전]
-//   좋은 것 → [풀 선택, 종류, x위치, 속도]
+// spawn() 안에서 불리는 순서대로 값을 돌려준다: [종류, 높이, x위치, 속도, 회전]
 let randSeq = () => 0.5;
 const cycle = arr => { let i = 0; return () => arr[i++ % arr.length]; };
-const GOODIE_CENTER  = cycle([0.9, 0.0, 0.5, 0.5]);   // 0.9 >= 0.65 → 좋은 것, 가운데
-const HAZARD_CENTER  = cycle([0.3, 0.0, 0.5, 0.5, 0.5, 0.5]); // 0.3 < 0.65 → 나쁜 것, 가운데
-const GOODIE_FAR     = cycle([0.9, 0.0, 0.999, 0.5]); // 좋은 것, 오른쪽 끝 → 안 맞음
+const HAZARD_CENTER = cycle([0.0, 0.5, 0.5, 0.5, 0.5]);   // 가운데로 떨어진다
+const HAZARD_FAR    = cycle([0.0, 0.5, 0.999, 0.5, 0.5]); // 오른쪽 끝 → 안 맞음
 const fakeMath = Object.create(Math);
 Object.defineProperty(fakeMath, 'random', { value: () => randSeq() });
 
@@ -106,16 +103,17 @@ const step = (ms = 16) => { now += ms; const f = frame; frame = null; f?.(now); 
 const frames = n => { for (let i = 0; i < n; i++) step(); };
 const flush = () => new Promise(r => setTimeout(r, 0));
 
-// --- 1) 캐릭터 6명, 각자 좋은 오브제 3개 -------------------------------------
+// --- 1) 캐릭터 6명, 각자 코스튬 -----------------------------------------------
 assert.equal(CHARS.length, 6, '캐릭터는 6명이어야 한다');
 assert.deepEqual(CHARS.map(c => c.name), ['본혁', '승일', '유경', '현호', '연수', '수연']);
 for (const c of CHARS) {
-  assert.equal(c.goodies.length, 3, `${c.name}의 좋은 오브제는 3개여야 한다`);
-  assert.ok(c.place && c.concept, `${c.name}의 배경/컨셉이 있어야 한다`);
+  assert.ok(c.place && c.costume, `${c.name}의 배경/코스튬이 있어야 한다`);
   assert.ok(c.team, `${c.name}의 팀명이 있어야 한다`);
   assert.match(c.tint, /^#[0-9a-f]{6}$/i, `${c.name}의 카드 색이 있어야 한다`);
+  assert.equal(c.goodies, undefined, `${c.name}에 먹는 아이템이 남아 있으면 안 된다`);
 }
-assert.equal(HAZARDS.length, 4, '피해야 하는 것은 4개여야 한다');
+assert.equal(HAZARDS.length, 2, '피해야 하는 것은 은행과 낙엽 둘뿐이어야 한다');
+assert.deepEqual(HAZARDS.map(h => h.name), ['은행', '낙엽']);
 
 // --- 1b) 선택 캐러셀: 처음엔 첫 캐릭터, 화살표로 넘어간다 ------------------
 assert.equal(el('cname').textContent, CHARS[0].name, '처음엔 첫 캐릭터가 보여야 한다');
@@ -129,18 +127,17 @@ assert.equal(el('cname').textContent, CHARS[CHARS.length - 1].name, '앞으로 �
 fire('next:click');   // 다시 첫 캐릭터로
 assert.equal(el('cname').textContent, CHARS[0].name, '한 바퀴 돌아 첫 캐릭터여야 한다');
 
-// --- 2) START를 누르면 필요한 이미지 9장을 불러온다 --------------------------
-// (배경 1 + 캐릭터 1 + 나쁜 것 4 + 좋은 것 3)
+// --- 2) START를 누르면 필요한 이미지 4장을 불러온다 --------------------------
+// (배경 1 + 캐릭터 1 + 은행 + 낙엽)
 loaded.length = 0;
 fire('go:click');
 await flush();
-const want = ['bg-bonhyuk', 'char-bonhyuk',
-              ...HAZARDS.map(h => h.img), ...CHARS[0].goodies.map(g => g.img)];
-assert.deepEqual(loaded.slice().sort(), want.slice().sort(), '9장을 불러와야 한다');
+const want = ['bg-bonhyuk', 'char-bonhyuk', ...HAZARDS.map(h => h.img)];
+assert.deepEqual(loaded.slice().sort(), want.slice().sort(), '4장을 불러와야 한다');
 assert.equal(el('over').classList.contains('hide'), false, '시작 전 안내가 떠 있어야 한다');
 
 // --- 3) 시작하면 배경과 캐릭터가 그려지고 시간 점수가 오른다 -----------------
-randSeq = GOODIE_FAR;                    // 화면 오른쪽 끝에만 떨어뜨려 아무것도 안 맞게 한다
+randSeq = HAZARD_FAR;                    // 화면 오른쪽 끝에만 떨어뜨려 아무것도 안 맞게 한다
 fire('again:click');
 assert.equal(el('over').classList.contains('hide'), true, '시작하면 안내가 사라져야 한다');
 frames(130);                             // 약 2초
@@ -149,16 +146,15 @@ assert.ok(drawn.includes('char-bonhyuk'), '캐릭터를 그려야 한다');
 assert.ok(Number(el('score').textContent) >= 2, `시간 점수가 올라야 한다: ${el('score').textContent}`);
 assert.equal(el('hp').textContent, '♥♥♥', '아직 목숨 3개여야 한다');
 
-// --- 4) 좋은 것이 캐릭터 위로 떨어지면 점수가 오른다 -------------------------
+// --- 4) 점수는 버틴 시간뿐이다 -----------------------------------------------
 const before = Number(el('score').textContent);
-randSeq = GOODIE_CENTER;                 // 좋은 것을 캐릭터 머리 위로 떨어뜨린다
-frames(320);                             // 약 5초 — 화면 위에서 바닥까지 내려올 시간
+frames(320);                             // 약 5초
 const after = Number(el('score').textContent);
-// 5초면 시간 점수만으로는 +5 정도. 그보다 훨씬 많이 오르면 주워 먹은 것이다.
-assert.ok(after > before + 8, `좋은 것을 주워 점수가 더 올라야 한다: ${before} → ${after}`);
+assert.ok(after >= before + 4 && after <= before + 6,
+  `점수는 버틴 시간(초)이어야 한다: ${before} → ${after}`);
 
 // --- 5) 나쁜 것에 맞으면 목숨이 줄고, 다 잃으면 게임 오버 --------------------
-randSeq = HAZARD_CENTER;                 // 나쁜 것만, 캐릭터가 있는 가운데로
+randSeq = HAZARD_CENTER;                 // 캐릭터가 있는 가운데로 떨어뜨린다
 let guard = 0;
 while (el('over').classList.contains('hide') && guard++ < 60 * 90) step();
 assert.equal(el('over').classList.contains('hide'), false, '목숨을 다 잃으면 게임 오버여야 한다');
@@ -185,4 +181,4 @@ assert.equal(el('play').classList.contains('on'), false, '게임 화면이 닫�
 const blocked = { getItem() { throw new Error('blocked'); }, setItem() { throw new Error('blocked'); } };
 run(doc, win, perf, blocked, raf, FakeImage, fakeMath);
 
-console.log(`통과 — 캐릭터 ${CHARS.length}명, 게임 오버까지 ${sc}점 기록, 이미지 ${want.length}장 로드`);
+console.log(`통과 — 캐릭터 ${CHARS.length}명, 피할 것 ${HAZARDS.length}종, 게임 오버까지 ${sc}점, 이미지 ${want.length}장 로드`);
