@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>가을 피하기</title>
+<title>은행 주의보</title>
 <style>
   /* 한글까지 지원하는 픽셀 폰트를 직접 담아 둔다 (외부 의존 없음) */
   @font-face {
@@ -19,9 +19,7 @@
   html { background: #6fc3f0; }
   body {
     min-height: 100vh;
-    background: #6fc3f0;
-    background-image: linear-gradient(#5bb8ee 0%, #93d6f5 55%, #cfeeff 100%);
-    background-attachment: fixed;
+    background: #8ecbe8 url('assets/bg-title.png') center top / cover no-repeat fixed;
     color: #17263f;
     font-family: Galmuri, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", monospace;
     -webkit-user-select: none; user-select: none;
@@ -34,48 +32,54 @@
   .px { border: 4px solid #17263f; box-shadow: 6px 6px 0 rgba(23, 38, 63, .25); }
 
   /* ---------- 캐릭터 선택 ---------- */
-  #select { width: 100%; max-width: 560px; padding: 26px 14px 40px; text-align: center; }
-  #select h1 {
-    font-size: 33px; font-weight: 700; letter-spacing: 1px; color: #fff2b8;
-    text-shadow: 3px 3px 0 #17263f, 6px 6px 0 rgba(23,38,63,.28);
+  #select {
+    width: 100%; max-width: 620px; margin: 22px 0 40px; padding: 26px 20px 30px;
+    text-align: center;
+    background: rgba(255, 253, 248, .93);
+    border: 4px solid #17263f;
+    box-shadow: 8px 8px 0 rgba(23, 38, 63, .28);
   }
-  #select .lead { margin-top: 14px; font-size: 11px; line-height: 2; }
+  #select h1 {
+    font-size: 44px; font-weight: 700; letter-spacing: 2px; color: #ffd84d;
+    text-shadow: 3px 3px 0 #17263f, 7px 7px 0 rgba(23,38,63,.22);
+  }
+  #select .lead { margin-top: 16px; font-size: 14px; line-height: 2; }
 
-  #carousel { margin-top: 22px; display: flex; align-items: center; justify-content: center; gap: 4px; }
+  #carousel { margin-top: 26px; display: flex; align-items: center; justify-content: center; gap: 8px; }
   .arrow {
     background: none; border: none; cursor: pointer; padding: 6px;
-    font: inherit; font-size: 18px; font-weight: 700; color: #17263f; line-height: 1;
+    font: inherit; font-size: 28px; font-weight: 700; color: #17263f; line-height: 1;
     text-shadow: 2px 2px 0 rgba(255,255,255,.6);
   }
   .arrow:hover { color: #e8407a; }
-  .side { width: 44px; height: 60px; display: flex; align-items: flex-end; justify-content: center; }
-  .side img { height: 34px; width: 34px; opacity: .5; }
+  .side { width: 86px; height: 110px; display: flex; align-items: flex-end; justify-content: center; }
+  .side img { height: 84px; width: 84px; opacity: .5; }
 
   #frame {
-    width: 96px; height: 96px; background: #fff;
+    width: 176px; height: 176px; background: #fff;
     display: flex; align-items: center; justify-content: center;
   }
-  #frame img { height: 62px; width: 62px; }
+  #frame img { height: 168px; width: 168px; }
 
   #meta { margin-top: 18px; }
-  #cname { font-size: 22px; font-weight: 700; text-shadow: 2px 2px 0 rgba(255,255,255,.7); }
+  #cname { font-size: 33px; font-weight: 700; text-shadow: 2px 2px 0 rgba(255,255,255,.7); }
   #cteam {
-    display: inline-block; margin-top: 10px; font-size: 11px; font-weight: 700;
-    background: #17263f; color: #ffe98f; padding: 5px 12px;
+    display: inline-block; margin-top: 14px; font-size: 14px; font-weight: 700;
+    background: #17263f; color: #ffe98f; padding: 7px 16px;
   }
-  #cplace { margin-top: 12px; font-size: 12px; font-weight: 700; color: #b3306b; }
-  #cconcept { margin-top: 10px; font-size: 11px; line-height: 1.9; color: #2b3d5c; }
-  #cbest { margin-top: 12px; font-size: 11px; }
+  #cplace { margin-top: 14px; font-size: 18px; font-weight: 700; color: #b3306b; }
+  #cconcept { margin-top: 10px; font-size: 16px; line-height: 1.9; color: #2b3d5c; }
+  #cbest { margin-top: 14px; font-size: 14px; }
 
   #dots { margin-top: 16px; display: flex; gap: 7px; justify-content: center; }
-  #dots i { width: 9px; height: 9px; background: rgba(23,38,63,.28); display: block; }
+  #dots i { width: 12px; height: 12px; background: rgba(23,38,63,.28); display: block; }
   #dots i.on { background: #17263f; }
 
   .btn {
     font: inherit; font-weight: 700; cursor: pointer;
     background: #ff4f8b; color: #fff;
     border: 4px solid #17263f; box-shadow: 5px 5px 0 rgba(23,38,63,.3);
-    padding: 12px 26px; font-size: 16px; letter-spacing: 1px;
+    padding: 15px 34px; font-size: 22px; letter-spacing: 2px;
   }
   .btn:active { transform: translate(2px, 2px); box-shadow: 3px 3px 0 rgba(23,38,63,.3); }
   .btn.alt { background: #fff; color: #17263f; font-size: 12px; padding: 10px 16px; }
@@ -124,7 +128,7 @@
 <body>
 
 <section id="select">
-  <h1>가을 피하기</h1>
+  <h1>은행 주의보</h1>
   <p class="lead">떨어지는 은행과 낙엽을 피해<br>최대한 오래 버티기</p>
 
   <div id="carousel">
@@ -172,7 +176,7 @@
   <p id="tips">마우스나 손가락을 좌우로 움직여 피하세요</p>
 </section>
 
-<script src="asmr.js"></script>
+<script src="bgm.js"></script>
 <script src="chars.js"></script>
 <script src="game.js"></script>
 </body>

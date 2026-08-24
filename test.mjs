@@ -9,7 +9,8 @@ const here = p => new URL(p, import.meta.url);
 const code = readFileSync(here('./chars.js'), 'utf8') + '\n' +
              readFileSync(here('./game.js'), 'utf8');
 // 브라우저 오디오는 흉내만 낸다 (소리 자체는 검사 대상이 아니다)
-const Asmr = { playing: false, start() { this.playing = true; }, stop() { this.playing = false; } };
+const Bgm = { playing: false, fever: false, start() { this.playing = true; },
+              stop() { this.playing = false; }, setFever(v) { this.fever = v; } };
 
 // --- 가짜 브라우저 -----------------------------------------------------------
 const drawn = [];                       // 이번 프레임에 그린 이미지 이름들
@@ -87,7 +88,7 @@ Object.defineProperty(fakeMath, 'random', { value: () => randSeq() });
 // chars.js의 CHARS를 꺼내오기 위해 마지막 줄에 반환문을 붙인다
 const run = new Function(
   'document', 'window', 'performance', 'localStorage',
-  'requestAnimationFrame', 'Image', 'Math', 'Asmr',
+  'requestAnimationFrame', 'Image', 'Math', 'Bgm',
   code + '\nreturn { CHARS, HAZARDS };'
 );
 
@@ -102,7 +103,7 @@ for (let i = 0; i < 6; i++) {
   });
 }
 
-const api = run(doc, win, perf, ls, raf, FakeImage, fakeMath, Asmr);
+const api = run(doc, win, perf, ls, raf, FakeImage, fakeMath, Bgm);
 const { CHARS, HAZARDS } = api;
 CHARS.forEach((c, i) => { cards[i].dataset.id = c.id; });
 
@@ -196,6 +197,6 @@ assert.equal(el('play').classList.contains('on'), false, '게임 화면이 닫�
 
 // --- 9) localStorage가 막힌 브라우저에서도 죽지 않는다 ----------------------
 const blocked = { getItem() { throw new Error('blocked'); }, setItem() { throw new Error('blocked'); } };
-run(doc, win, perf, blocked, raf, FakeImage, fakeMath, Asmr);
+run(doc, win, perf, blocked, raf, FakeImage, fakeMath, Bgm);
 
 console.log(`통과 — 캐릭터 ${CHARS.length}명, 피할 것 ${HAZARDS.length}종, 게임 오버까지 ${sc}점, 이미지 ${want.length}장 로드`);

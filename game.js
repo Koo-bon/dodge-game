@@ -140,6 +140,7 @@
     items = []; pops = [];
     elapsed = 0; lives = LIVES; invuln = 0; spawnTimer = 0;
     fever = 0; feverTimer = FEVER_EVERY * 0.6; points = 0;
+    Bgm.setFever(false);
     px = W / 2; py = H - PAD_Y;
     state = 'playing';
     overlay.classList.add('hide');
@@ -212,7 +213,9 @@
     elapsed += dt;
     points += dt * (fever > 0 ? 2 : 1);
     if (invuln > 0) invuln -= dt;
+    const wasFever = fever > 0;
     if (fever > 0) fever -= dt;
+    if (wasFever !== (fever > 0)) Bgm.setFever(fever > 0);   // 곡 템포를 바꾼다
 
     feverTimer -= dt;
     if (feverTimer <= 0) {
@@ -236,6 +239,7 @@
 
       if (it.kind.good) {                                        // 피버 아이템
         fever = FEVER;
+        Bgm.setFever(true);
         pops.push({ x: it.x + it.w / 2, y: it.y, t: 0, txt: '피버!', good: true });
         items.splice(i, 1);
       } else if (fever > 0) {
@@ -323,17 +327,17 @@
   // 브라우저는 사용자가 누른 직후에만 소리를 허용하므로 시작 클릭에서 함께 켠다
   let soundWanted = true;
   function syncSound() {
-    $('sound').textContent = Asmr.playing ? '♪ ON' : '♪ OFF';
-    $('sound').classList.toggle('off', !Asmr.playing);
+    $('sound').textContent = Bgm.playing ? '♪ ON' : '♪ OFF';
+    $('sound').classList.toggle('off', !Bgm.playing);
   }
   $('sound').addEventListener('click', () => {
     soundWanted = !soundWanted;
-    soundWanted ? Asmr.start() : Asmr.stop();
+    soundWanted ? Bgm.start() : Bgm.stop();
     syncSound();
   });
 
   const press = () => {
-    if (soundWanted) Asmr.start();
+    if (soundWanted) Bgm.start();
     syncSound();
     if (art && state !== 'playing') start();
   };
