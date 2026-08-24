@@ -4,7 +4,8 @@
   const overlay = $('over');
 
   const PLAYER_H = 78;        // 캐릭터 그리는 높이(px)
-  const HIT_R = 17;           // 캐릭터 판정 반지름(그림보다 작게 — 억울한 피격 방지)
+  const HIT_R = 20;           // 캐릭터 판정 반지름(그림보다 작게 — 억울한 피격 방지)
+  const PAD_Y = PLAYER_H / 2; // 스프라이트가 위아래로 잘리지 않게 두는 여백
   const LIVES = 3;
   const INVULN = 1.2;         // 피격 후 무적 시간(초)
 
@@ -116,10 +117,10 @@
     ctx.imageSmoothingEnabled = false;
     if (state === 'playing') {
       px = clamp(px, HIT_R, W - HIT_R);
-      py = clamp(py, HIT_R, H - HIT_R);
+      py = clamp(py, PAD_Y, H - PAD_Y);
     } else {
       px = W / 2;
-      py = H - PLAYER_H * 0.55;
+      py = H - PAD_Y;
     }
     if (art) draw();
   }
@@ -127,7 +128,7 @@
   function start() {
     items = []; pops = [];
     elapsed = 0; picked = 0; pickedCount = 0; lives = LIVES; invuln = 0; spawnTimer = 0;
-    px = W / 2; py = H - PLAYER_H * 0.55;
+    px = W / 2; py = H - PAD_Y;
     state = 'playing';
     overlay.classList.add('hide');
     updateHud();
@@ -255,7 +256,7 @@
     if (!blink) {
       const ph = PLAYER_H, pw = ph * (art.player.width / art.player.height);
       ctx.globalAlpha = state === 'over' ? 0.55 : 1;
-      ctx.drawImage(art.player, px - pw / 2, py - ph * 0.62, pw, ph);
+      ctx.drawImage(art.player, px - pw / 2, py - ph / 2, pw, ph);
       ctx.globalAlpha = 1;
     }
 
@@ -278,7 +279,7 @@
     if (state !== 'playing') return;
     const r = cv.getBoundingClientRect();
     px = clamp(e.clientX - r.left, HIT_R, W - HIT_R);
-    py = clamp(e.clientY - r.top, HIT_R, H - HIT_R);
+    py = clamp(e.clientY - r.top, PAD_Y, H - PAD_Y);
   });
   cv.addEventListener('pointerdown', e => e.preventDefault());
 
