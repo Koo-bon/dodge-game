@@ -112,6 +112,8 @@ assert.deepEqual(CHARS.map(c => c.name), ['본혁', '승일', '유경', '현호'
 for (const c of CHARS) {
   assert.equal(c.goodies.length, 3, `${c.name}의 좋은 오브제는 3개여야 한다`);
   assert.ok(c.place && c.concept, `${c.name}의 배경/컨셉이 있어야 한다`);
+  assert.ok(c.team, `${c.name}의 팀명이 있어야 한다`);
+  assert.match(c.tint, /^#[0-9a-f]{6}$/i, `${c.name}의 카드 색이 있어야 한다`);
 }
 assert.equal(HAZARDS.length, 4, '피해야 하는 것은 4개여야 한다');
 assert.equal(cards.length, 6, '선택 카드가 6개 만들어져야 한다');

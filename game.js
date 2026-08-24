@@ -32,10 +32,11 @@
   function buildSelect() {
     $('grid').innerHTML = CHARS.map(c => `
       <div class="card" tabindex="0" role="button" data-id="${c.id}">
-        <div class="thumb" style="background-image:url(assets/bg-${c.id}.png)">
+        <div class="thumb" style="background:${c.tint}">
           <img src="assets/char-${c.id}.png" alt="${c.name}">
         </div>
         <div class="nm">${c.name}</div>
+        <div class="tm">${c.team}</div>
         <div class="pl">${c.place}</div>
         <div class="cc">${c.concept}</div>
         <div class="bs">최고 ${store.get(bestKey(c.id))}점</div>
@@ -66,7 +67,7 @@
     state = 'ready';
     $('select').style.display = 'none';
     $('play').classList.add('on');
-    $('who').textContent = `${char.name} · ${char.place}`;
+    $('who').textContent = `${char.name} · ${char.team}`;
     resize();
     showOverlay('불러오는 중…', '', '');
     $('again').style.display = 'none';
