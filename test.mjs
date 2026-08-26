@@ -18,6 +18,7 @@ const drawnAt = { player: null, fev: null };  // 캐릭터·피버 아이템을 
 const ctx = {
   setTransform() {}, clearRect() { drawn.length = 0; }, save() {}, restore() {},
   translate() {}, rotate() {}, fillText() {}, strokeText() {}, strokeRect() {},
+  beginPath() {}, arc() {}, fill() {}, stroke() {},
   drawImage(im, x, y, w, h) {
     drawn.push(im.name);
     if (im.name.startsWith('char-')) drawnAt.player = { x, y };
@@ -52,7 +53,7 @@ const doc = {
   getElementById: el,
   addEventListener(type, fn) { (handlers[`doc:${type}`] ??= []).push(fn); }
 };
-const win = { innerWidth: 520, innerHeight: 900, devicePixelRatio: 2, ASSET_V: '4', addEventListener() {} };
+const win = { innerWidth: 520, innerHeight: 900, devicePixelRatio: 2, ASSET_V: '5', addEventListener() {} };
 
 let now = 0;
 const perf = { now: () => now };
@@ -139,14 +140,14 @@ assert.equal(el('cname').textContent, CHARS[CHARS.length - 1].name, '앞으로 �
 fire('next:click');   // 다시 첫 캐릭터로
 assert.equal(el('cname').textContent, CHARS[0].name, '한 바퀴 돌아 첫 캐릭터여야 한다');
 
-// --- 2) START를 누르면 필요한 이미지 6장을 불러온다 --------------------------
-// (배경 1 + 피버용 배경 1 + 캐릭터 1 + 피버 아이템 1 + 은행 + 낙엽)
+// --- 2) START를 누르면 필요한 이미지 7장을 불러온다 --------------------------
+// (배경 1 + 춤 배경 2 + 캐릭터 1 + 피버 아이템 1 + 은행 + 낙엽)
 loaded.length = 0;
 fire('go:click');
 await flush();
-const want = ['bg-bonhyuk', 'bgf-bonhyuk', 'char-bonhyuk',
+const want = ['bg-bonhyuk', 'bgf-bonhyuk', 'bgf2-bonhyuk', 'char-bonhyuk',
               CHARS[0].fever.img, ...HAZARDS.map(h => h.img)];
-assert.deepEqual(loaded.slice().sort(), want.slice().sort(), '6장을 불러와야 한다');
+assert.deepEqual(loaded.slice().sort(), want.slice().sort(), '7장을 불러와야 한다');
 assert.equal(el('over').classList.contains('hide'), false, '시작 전 안내가 떠 있어야 한다');
 
 // --- 3) 시작하면 배경과 캐릭터가 그려지고 시간 점수가 오른다 -----------------
@@ -175,7 +176,8 @@ randSeq = () => 0.99;
 const moveTo = x => fire('cv:pointermove', { clientX: x });
 moveTo(0);
 let feverFrames = 0, feverBgFrames = 0, plainBgWhileFever = 0, guardF = 0;
-while (feverFrames < 5 && guardF++ < 60 * 200) {
+let danceA = 0, danceB = 0;
+while (feverFrames < 90 && guardF++ < 60 * 200) {   // 약 1.5초분 — 춤 프레임이 여러 번 바뀌도록
   if (!el('over').classList.contains('hide')) { fire('again:click'); moveTo(0); }
   // 피버 아이템이 화면에 있으면 그 밑으로 따라간다
   const f = drawnAt.fev;
@@ -184,22 +186,42 @@ while (feverFrames < 5 && guardF++ < 60 * 200) {
   step();
   if (/FEVER/.test(el('hp').textContent)) {
     feverFrames++;
-    if (drawn.includes('bgf-bonhyuk')) feverBgFrames++;
+    if (drawn.includes('bgf-bonhyuk') || drawn.includes('bgf2-bonhyuk')) feverBgFrames++;
+    if (drawn.includes('bgf-bonhyuk')) danceA++;
+    if (drawn.includes('bgf2-bonhyuk')) danceB++;
     if (drawn.includes('bg-bonhyuk')) plainBgWhileFever++;
   }
 }
-assert.ok(feverFrames >= 5, `피버 아이템을 먹어 피버타임에 들어가야 한다 (관측 ${feverFrames})`);
+assert.ok(feverFrames >= 90, `피버 아이템을 먹어 피버타임에 들어가야 한다 (관측 ${feverFrames})`);
 assert.equal(feverBgFrames, feverFrames,
-  `피버 중에는 놀란 표정 배경을 그려야 한다 (${feverBgFrames}/${feverFrames})`);
+  `피버 중에는 춤 배경을 그려야 한다 (${feverBgFrames}/${feverFrames})`);
 assert.equal(plainBgWhileFever, 0, '피버 중에 평소 배경을 그리면 안 된다');
 
-// 피버가 끝나면 평소 배경으로 돌아온다
+// 피버 내내 두 자세를 번갈아 그려야 춤으로 보인다
+assert.ok(danceA > 0 && danceB > 0,
+  `춤 두 자세가 모두 쓰여야 한다 (1번 ${danceA}프레임 / 2번 ${danceB}프레임)`);
+
+// 피버가 끝나면 평소 배경으로 돌아오고, 몇 초는 맞아도 안 깎인다
+const livesAtFeverEnd = el('hp').textContent;
 for (let i = 0; i < 600 && /FEVER/.test(el('hp').textContent); i++) step();
 step();
 assert.ok(drawn.includes('bg-bonhyuk'), '피버가 끝나면 평소 배경으로 돌아와야 한다');
-assert.ok(!drawn.includes('bgf-bonhyuk'), '피버가 아니면 놀란 표정 배경을 쓰지 않아야 한다');
+assert.ok(!drawn.includes('bgf-bonhyuk') && !drawn.includes('bgf2-bonhyuk'),
+  '피버가 아니면 춤 배경을 쓰지 않아야 한다');
+
+// 피버 직후 무적: 나쁜 것을 캐릭터 위로 쏟아부어도 목숨이 안 줄어야 한다
+const heartsAfterFever = el('hp').textContent;
+randSeq = HAZARD_CENTER;
+moveTo(9999);
+for (let i = 0; i < 60; i++) {                 // 약 1초
+  const f2 = drawnAt.fev; if (f2) moveTo(f2.x + f2.w / 2);
+  step();
+}
+assert.equal(el('hp').textContent, heartsAfterFever,
+  `피버가 끝난 직후 몇 초는 무적이어야 한다 (${heartsAfterFever} → ${el('hp').textContent})`);
 
 // --- 5) 나쁜 것에 맞으면 목숨이 줄고, 다 잃으면 게임 오버 --------------------
+moveTo(parseFloat(el('cv').style.width) / 2);   // 앞 단계에서 오른쪽에 서 있었으니 가운데로
 randSeq = HAZARD_CENTER;                 // 캐릭터가 있는 가운데로 떨어뜨린다
 let guard = 0;
 while (el('over').classList.contains('hide') && guard++ < 60 * 90) step();

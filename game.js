@@ -14,6 +14,8 @@
   const INVULN = 0.8;         // 피격 후 무적 시간(초)
   const FEVER = 5;            // 피버타임 길이(초)
   const FEVER_EVERY = 11;     // 피버 아이템이 나오는 평균 간격(초)
+  const FEVER_GRACE = 2.5;    // 피버가 끝난 뒤 남는 무적 시간(초)
+  const DANCE_STEP = 0.2;     // 배경 동물 춤 프레임 간격(초) — 8비트 느낌으로 딱딱 끊기게
 
   // 시크릿 모드·일부 브라우저에서 localStorage 접근 자체가 예외를 던진다
   const store = {
@@ -97,15 +99,16 @@
     showOverlay('불러오는 중…', '', '');
     $('again').style.display = 'none';
     try {
-      const [bg, bgFever, player, feverIm, ...rest] = await Promise.all([
+      const [bg, bgFever, bgFever2, player, feverIm, ...rest] = await Promise.all([
         loadImage(`bg-${char.id}`),
-        loadImage(`bgf-${char.id}`),          // 피버 중에 쓰는 판 — 배경 동물이 놀란 표정
+        loadImage(`bgf-${char.id}`),          // 피버 중 춤 1번 자세
+        loadImage(`bgf2-${char.id}`),         // 피버 중 춤 2번 자세
         loadImage(`char-${char.id}`),
         loadImage(char.fever.img),
         ...HAZARDS.map(h => loadImage(h.img))
       ]);
       art = {
-        bg, bgFever, player,
+        bg, bgFever, bgFever2, player,
         hazards: HAZARDS.map((h, i) => ({ ...h, im: rest[i] })),
         fever: { ...char.fever, im: feverIm, good: true }
       };
@@ -118,7 +121,7 @@
     showOverlay(char.name,
       `${HAZARDS.map(h => h.name).join('과 ')}을 피하세요`,
       `목숨 ${LIVES}개 · 버틴 1초가 1점<br>` +
-      `${char.fever.name}을 먹으면 ${FEVER}초 피버타임 (무적 · 2배 점수)`);
+      `${char.fever.name}을 먹으면 ${FEVER}초 피버타임<br>무적 · 2배 점수 · 끝나고도 ${FEVER_GRACE}초 무적`);
     draw();
   }
 
@@ -203,7 +206,7 @@
   }
 
   function spawnFever() {
-    push(art.fever, 36 * k, 190 + Math.random() * 50, 0);
+    push(art.fever, 52 * k, 190 + Math.random() * 50, 0);   // 나쁜 것보다 확실히 크게
   }
 
   function hits(it) {
@@ -225,6 +228,9 @@
     if (invuln > 0) invuln -= dt;
     const wasFever = fever > 0;
     if (fever > 0) fever -= dt;
+    if (wasFever && fever <= 0) {
+      invuln = Math.max(invuln, FEVER_GRACE);   // 피버가 끝나도 잠깐은 안 맞는다
+    }
     if (wasFever !== (fever > 0)) Bgm.setFever(fever > 0);   // 곡 템포를 바꾼다
 
     feverTimer -= dt;
@@ -283,10 +289,35 @@
   function draw() {
     ctx.clearRect(0, 0, W, H);
     if (!art) return;
-    drawCover(fever > 0 && art.bgFever ? art.bgFever : art.bg);
+    if (fever > 0 && art.bgFever) {
+      // 두 자세를 딱딱 번갈아 → 8비트 게임처럼 끊기는 춤
+      const beat = Math.floor(elapsed / DANCE_STEP) % 2;
+      drawCover(beat && art.bgFever2 ? art.bgFever2 : art.bgFever);
+    } else {
+      drawCover(art.bg);
+    }
 
     for (const it of items) {
-      if (it.rot) {
+      if (it.kind.good) {
+        // 피버 아이템은 놓치면 안 되니까 눈에 띄게 — 반짝이는 후광 + 살짝 커졌다 작아졌다
+        const cx = it.x + it.w / 2, cy = it.y + it.h / 2;
+        const pulse = 1 + Math.sin(elapsed * 9) * 0.08;
+        ctx.save();
+        ctx.globalAlpha = 0.28 + 0.22 * (Math.sin(elapsed * 9) + 1) / 2;
+        ctx.fillStyle = '#ffe14d';
+        ctx.beginPath();
+        ctx.arc(cx, cy, it.w * 0.78 * pulse, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = Math.floor(elapsed * 10) % 2 ? '#fff' : '#ffe14d';
+        ctx.lineWidth = 3 * k;
+        ctx.beginPath();
+        ctx.arc(cx, cy, it.w * 0.62 * pulse, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+        const w2 = it.w * pulse, h2 = it.h * pulse;
+        ctx.drawImage(it.kind.im, cx - w2 / 2, cy - h2 / 2, w2, h2);
+      } else if (it.rot) {
         ctx.save();
         ctx.translate(it.x + it.w / 2, it.y + it.h / 2);
         ctx.rotate(it.rot);
